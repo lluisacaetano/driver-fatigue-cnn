@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CNN — Detecção de Fadiga do Motorista</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================================
+   THEME (Style C — Visão Computacional / HUD)
+   Mude estas variáveis para alterar todo o visual
+   =========================================================== */
+:root{
+  --stage-bg:#070b10; --slide-bg:#0b1117; --bg2:#0e151d;
+  --teal:#1fe3b6; --amber:#ffb23e; --ink:#dce7f0; --mut:#637688;
+  --line:rgba(120,150,170,.16);
+  --fd:'Chakra Petch',sans-serif; --fm:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===== viewport-base.css (palco fixo 16:9) ===== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+@media print{html,body{width:1920px;height:auto;overflow:visible;background:#fff}.deck-viewport{position:static;overflow:visible}.deck-stage{position:static;width:auto;height:auto;transform:none!important}.slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;width:1920px;height:1080px;break-after:page}.deck-controls{display:none!important}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}}
+
+/* ===== Atmosfera comum (matriz de pontos + glow) ===== */
+.slide{font-family:var(--fd);color:var(--ink);
+  background:
+    radial-gradient(820px 620px at 78% 42%,rgba(31,227,182,.10),transparent 62%),
+    repeating-linear-gradient(0deg,rgba(255,255,255,.015) 0 2px,transparent 2px 4px),
+    var(--slide-bg);}
+.dots{position:absolute;inset:0;background-image:radial-gradient(rgba(120,150,170,.16) 1.3px,transparent 1.4px);
+  background-size:44px 44px;mask:radial-gradient(1000px 640px at 70% 50%,#000 32%,transparent 80%);pointer-events:none}
+/* cantos tipo câmera */
+.brk{position:absolute;inset:54px;pointer-events:none}
+.brk i{position:absolute;width:46px;height:46px;border:2px solid var(--teal);opacity:.55}
+.brk .tl{top:0;left:0;border-right:0;border-bottom:0}.brk .tr{top:0;right:0;border-left:0;border-bottom:0}
+.brk .bl{bottom:0;left:0;border-right:0;border-top:0}.brk .br{bottom:0;right:0;border-left:0;border-top:0}
+/* chrome topo */
+.seclabel{position:absolute;top:84px;left:150px;font-family:var(--fm);font-size:19px;letter-spacing:.26em;
+  color:var(--teal);text-transform:uppercase;display:flex;align-items:center;gap:14px}
+.seclabel::before{content:"";width:34px;height:2px;background:var(--teal);box-shadow:0 0 10px var(--teal)}
+.pnum{position:absolute;top:84px;right:150px;font-family:var(--fm);font-size:18px;color:var(--mut);letter-spacing:.1em}
+
+/* área de conteúdo */
+.body{position:absolute;left:150px;right:150px;top:210px;bottom:120px}
+.h{font-family:var(--fd);font-weight:700;font-size:88px;line-height:1.02;letter-spacing:-.01em;text-transform:uppercase}
+.h .ac{color:var(--teal);text-shadow:0 0 34px rgba(31,227,182,.4)}
+.h .am{color:var(--amber)}
+.lead{font-weight:400;font-size:34px;line-height:1.45;color:#9fb1c0;max-width:1150px;margin-top:36px}
+.lead b{color:var(--ink);font-weight:600}
+
+/* animação de entrada */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.d1{transition-delay:.08s}.d2{transition-delay:.18s}.d3{transition-delay:.28s}.d4{transition-delay:.38s}.d5{transition-delay:.48s}.d6{transition-delay:.58s}
+
+/* cards */
+.cards{display:grid;gap:34px;margin-top:60px}
+.cards.c2{grid-template-columns:1fr 1fr}.cards.c3{grid-template-columns:1fr 1fr 1fr}
+.card{background:linear-gradient(180deg,rgba(31,227,182,.05),transparent),var(--bg2);
+  border:1px solid var(--line);border-radius:16px;padding:42px 40px;position:relative}
+.card .k{font-family:var(--fm);font-size:18px;color:var(--teal);letter-spacing:.14em;text-transform:uppercase}
+.card h3{font-weight:600;font-size:38px;margin:16px 0 14px}
+.card p{font-weight:400;font-size:26px;line-height:1.4;color:#92a4b3}
+
+/* fluxo (pipeline) */
+.flow{display:flex;align-items:stretch;gap:0;margin-top:70px;flex-wrap:wrap}
+.step{flex:1;min-width:0;background:var(--bg2);border:1px solid var(--line);border-radius:14px;
+  padding:34px 22px;text-align:center;position:relative}
+.step .si{font-family:var(--fm);font-size:16px;color:var(--mut)}
+.step .st{font-weight:600;font-size:30px;margin-top:10px}
+.step .sd{font-size:21px;color:#8597a6;margin-top:8px;line-height:1.3}
+.arrow{display:flex;align-items:center;justify-content:center;width:56px;color:var(--teal);font-size:34px}
+.step.hot{border-color:rgba(31,227,182,.5);box-shadow:0 0 36px rgba(31,227,182,.12)}
+.step.hot .st{color:var(--teal)}
+
+/* arquitetura CNN */
+.arch{display:flex;align-items:center;gap:0;margin-top:80px;flex-wrap:wrap;justify-content:center}
+.lay{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:26px 18px;text-align:center;min-width:118px}
+.lay .lt{font-weight:600;font-size:23px}.lay .ls{font-family:var(--fm);font-size:15px;color:var(--mut);margin-top:6px}
+.lay.conv{border-color:rgba(31,227,182,.45)}.lay.out{border-color:rgba(255,178,62,.55)}
+.lay.out .lt{color:var(--amber)}
+.amini{color:var(--teal);font-size:26px;padding:0 12px}
+
+/* resultado grande */
+.bignum{font-family:var(--fd);font-weight:700;font-size:240px;line-height:.9;color:var(--teal);
+  text-shadow:0 0 60px rgba(31,227,182,.35);letter-spacing:-.03em}
+.biglabel{font-family:var(--fm);font-size:26px;color:var(--mut);letter-spacing:.2em;text-transform:uppercase;margin-top:10px}
+
+/* monospace data / HUD chip */
+.chip{display:inline-flex;gap:18px;font-family:var(--fm);font-size:22px;color:var(--teal);
+  background:rgba(7,15,18,.6);border:1px solid rgba(31,227,182,.35);border-radius:10px;padding:14px 22px}
+.chip b{color:var(--amber);font-weight:500}
+
+/* ===== Slides especiais ===== */
+/* Capa */
+.cover .ttl{font-family:var(--fd);font-weight:700;font-size:110px;line-height:.98;text-transform:uppercase;margin:0}
+.cover .ttl .cnn{color:var(--teal);text-shadow:0 0 38px rgba(31,227,182,.45)}
+.cover .eb{font-family:var(--fm);font-weight:500;letter-spacing:.28em;font-size:21px;color:var(--teal);
+  text-transform:uppercase;margin-bottom:34px;display:flex;align-items:center;gap:16px}
+.cover .eb::before{content:"";width:46px;height:2px;background:var(--teal);box-shadow:0 0 12px var(--teal)}
+.cover .sub{font-weight:400;font-size:34px;color:#93a6b6;margin-top:40px;max-width:900px}
+.cover .foot{position:absolute;left:150px;bottom:96px;font-family:var(--fm);font-size:19px;color:#5a6c7c;letter-spacing:.03em}
+.det{position:absolute;right:150px;top:50%;transform:translateY(-50%);width:480px;height:480px;
+  border:2px dashed rgba(31,227,182,.4);border-radius:18px;overflow:hidden;background:linear-gradient(180deg,rgba(31,227,182,.05),transparent)}
+.det .eye{position:absolute;inset:0;display:grid;place-items:center;font-size:190px;color:rgba(31,227,182,.16)}
+.det .scan{position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--teal),transparent);box-shadow:0 0 22px var(--teal);animation:scan 3.4s ease-in-out infinite}
+.det .dchip{position:absolute;top:20px;left:20px;font-family:var(--fm);font-size:17px;color:var(--teal);background:rgba(7,15,18,.7);border:1px solid rgba(31,227,182,.35);border-radius:8px;padding:7px 12px}
+.det .dchip b{color:var(--amber);font-weight:500}
+@keyframes scan{0%,100%{top:6%}50%{top:94%}}
+
+/* Divider de seção */
+.divider{display:grid;place-items:center;text-align:center}
+.divider .pp{font-family:var(--fm);letter-spacing:.34em;font-size:24px;color:var(--teal);text-transform:uppercase}
+.divider .dt{font-family:var(--fd);font-weight:700;font-size:104px;text-transform:uppercase;margin-top:30px;line-height:1.02}
+.divider .scanline{width:60%;height:2px;margin:54px auto 0;background:linear-gradient(90deg,transparent,var(--teal),transparent);box-shadow:0 0 20px var(--teal)}
+
+/* convolução visual */
+.convwrap{position:absolute;right:150px;top:210px;bottom:120px;width:560px;display:grid;place-items:center}
+.cgrid{position:relative;display:grid;grid-template-columns:repeat(7,58px);grid-auto-rows:58px;gap:9px}
+.cgrid i{border:1.5px solid var(--line);border-radius:7px;background:rgba(160,180,230,.03)}
+.kernel{position:absolute;width:206px;height:206px;border:3px solid var(--teal);border-radius:12px;
+  box-shadow:0 0 44px rgba(31,227,182,.55);background:rgba(31,227,182,.10);top:0;left:0;animation:slidek 4.6s ease-in-out infinite}
+@keyframes slidek{0%,100%{transform:translate(0,0)}50%{transform:translate(134px,134px)}}
+
+/* demo beat */
+.demo{display:grid;place-items:center;text-align:center}
+.demo .live{font-family:var(--fm);font-size:24px;color:var(--amber);letter-spacing:.3em;text-transform:uppercase;display:inline-flex;align-items:center;gap:14px}
+.demo .live::before{content:"";width:16px;height:16px;border-radius:50%;background:var(--amber);box-shadow:0 0 18px var(--amber);animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:.25}}
+.demo .dt{font-family:var(--fd);font-weight:700;font-size:118px;text-transform:uppercase;margin-top:26px}
+.demo .dsub{font-size:30px;color:#93a6b6;margin-top:26px}
+
+/* fecho */
+.close .lead{font-size:36px}
+.linkrow{margin-top:46px;display:flex;gap:18px;flex-wrap:wrap}
+.lpill{font-family:var(--fm);font-size:20px;color:var(--teal);border:1px solid rgba(31,227,182,.35);border-radius:999px;padding:12px 22px}
+.thanks{font-family:var(--fd);font-weight:700;font-size:96px;text-transform:uppercase}
+.thanks .ac{color:var(--teal)}
+
+/* controles (fora do palco) */
+.deck-controls{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:1000;
+  font-family:var(--fm);font-size:14px;color:var(--mut);letter-spacing:.18em;display:flex;align-items:center;gap:16px}
+.deck-controls .bar{width:200px;height:3px;background:rgba(120,150,170,.2);border-radius:2px;overflow:hidden}
+.deck-controls .bar span{display:block;height:100%;background:var(--teal);box-shadow:0 0 10px var(--teal);transition:width .4s var(--ease)}
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000;cursor:pointer}
+.edit-toggle{position:fixed;top:18px;left:18px;z-index:10001;opacity:0;pointer-events:none;transition:opacity .3s;
+  background:var(--bg2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 12px;font-size:18px;cursor:pointer}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{border-color:var(--teal);color:var(--teal)}
+[contenteditable=true]{outline:2px dashed rgba(31,227,182,.5);outline-offset:6px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+  <!-- === 01 CAPA === -->
+  <section class="slide cover active">
+    <div class="dots"></div><div class="brk"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+    <div class="det">
+      <div class="dchip">● TRACKING &nbsp; EAR <b>0.27</b> &nbsp; PERCLOS <b>16%</b></div>
+      <div class="eye">◉</div><div class="scan"></div>
+    </div>
+    <div class="body" style="display:flex;flex-direction:column;justify-content:center;top:0;bottom:0;max-width:1060px">
+      <div class="eb reveal d1">Visão Computacional · tempo real</div>
+      <h1 class="ttl reveal d2">Redes Neurais<br>Convolucionais <span class="cnn">(CNN)</span></h1>
+      <p class="sub reveal d3">Estudo de caso: detecção de fadiga do motorista.</p>
+    </div>
+    <div class="foot reveal d4">LUISA CAETANO ARAÚJO · IFMG CAMPUS FORMIGA · PROF. ME. FERNANDO PAIM LIMA</div>
+  </section>
+
+  <!-- === 02 VISÃO COMPUTACIONAL === -->
+  <section class="slide">
+    <div class="dots"></div><div class="brk"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+    <div class="seclabel">Parte 1 · A tecnologia</div><div class="pnum">02</div>
+    <div class="body" style="display:flex;flex-direction:column;justify-content:center;top:0;bottom:0">
+      <h2 class="h reveal d1">Ensinar a máquina<br>a <span class="ac">enxergar</span></h2>
+      <p class="lead reveal d2">A <b>Visão Computacional</b> permite que computadores interpretem imagens e vídeos. As <b>Redes Neurais Convolucionais (CNN)</b> são a ferramenta que tornou isso possível em larga escala — de reconhecer rostos a guiar carros.</p>
+    </div>
+  </section>
+
+  <!-- === 03 O QUE É CNN === -->
+  <section class="slide">
+    <div class="dots"></div><div class="brk"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+    <div class="seclabel">Parte 1 · Conceito</div><div class="pnum">03</div>
+    <div class="body">
+      <h2 class="h reveal d1">O que é uma <span class="ac">CNN</span>?</h2>
+      <div class="cards c2">
+        <div class="card reveal d2"><div class="k">Especializada</div><h3>Rede neural para imagens</h3><p>Aprende padrões locais e os combina em representações cada vez mais complexas: bordas → formas → objeto.</p></div>
+        <div class="card reveal d3"><div class="k">Vantagem</div><h3>Aprende com menos dados</h3><p>Diferente de uma rede tradicional, a CNN já "sabe" que pixels vizinhos importam — por isso é tão eficaz em visão.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- === 04 CONVOLUÇÃO === -->
+  <section class="slide">
+    <div class="dots"></div><div class="brk"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+    <div class="seclabel">Parte 1 · Convolução</div><div class="pnum">04</div>
+    <div class="body" style="right:760px;display:flex;flex-direction:column;justify-content:center;top:0;bottom:0">
+      <h2 class="h reveal d1">Filtros que<br>varrem a imagem</h2>
+      <p class="lead reveal d2">Um pequeno <b>filtro (kernel)</b> desliza pela imagem e detecta padrões locais — bordas, cantos, texturas. Cada filtro aprende a reconhecer um tipo de característica.</p>
+    </div>
+    <div class="convwrap reveal d3">
+      <div class="cgrid">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <div class="kernel"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- === 05 RELU + POOLING === -->
+  <section class="slide">
+    <div class="dots"></div><div class="brk"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+    <div class="seclabel">Parte 1 · Camadas</div><div class="pnum">05</div>
+    <div class="body">
+      <h2 class="h reveal d1"><span class="ac">ReLU</span> e <span class="ac">MaxPooling</span></h2>
+      <div class="cards c2">
+        <div class="card reveal d2"><div class="k">Ativação</div><h3>ReLU</h3><p>Mantém só o que importa (zera os valores negativos). Dá não-linearidade e deixa a rede aprender padrões complexos.</p></div>
+        <div class="card reveal d3"><div class="k">Redução</div><h3>MaxPooling</h3><p>Reduz a imagem pela metade, preservando as características mais fortes de cada região. Mais leve e mais robusto.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- === 06 FLATTEN + DENSE === -->
+  <section class="slide">
+    <div class="dots"></div><div class="brk"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+    <div class="seclabel">Parte 1 · Decisão</div><div class="pnum">06</div>
+    <div class="body" style="display:flex;flex-direction:column;justify-content:center;top:0;bottom:0">
+      <h2 class="h reveal d1">Da imagem<br>à <span class="ac">decisão</span></h2>
+      <div class="flow reveal d2">
+        <div class="step"><div class="si">camada</div><div class="st">Flatten</div><div class="sd">vetoriza as características</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="si">camada</div><div class="st">Dense</div><div class="sd">totalmente conectada</div></div>
+        <div class="arrow">→</div>
+        <div class="step hot"><div class="si">resultado</div><div class="st">Saída</div><div class="sd">classifica a imagem</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- === 07 DIVIDER PARTE 2 === -->
+  <section class="slide">
+    <div class="dots"></div><div class="brk"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+    <div class="body divider" style="top:0;bottom:0">
+      <div>
+        <div class="pp reveal d1">Parte 2 · Estudo de caso</div>
+        <div class="dt reveal d2">Detecção de Fadiga<br>do <span style="color:var(--teal)">Motorista</span></div>
+        <div class="scanline reveal d3"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- === 08 O PROBLEMA === -->
+  <section class="slide">
+    <div class="dots"></div><div class="brk"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+    <div class="seclabel">Parte 2 · O problema</div><div class="pnum">08</div>
+    <div class="body" style="display:flex;flex-direction:column;justify-content:center;top:0;bottom:0">
+      <h2 class="h reveal d1">Dirigir com sono<br><span class="am">mata</span></h2>
+      <p class="lead reveal d2">A fadiga é <b>progressiva e silenciosa</b> — o motorista quase não percebe que já está sonolento. E se a câmera percebesse por ele, em tempo real?</p>
+    </div>
+  </section>
+
+  <!-- === 09 SOLUÇÃO / PIPELINE === -->
+  <section class="slide">
+    <div class="dots"></div><div class="brk"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+    <div class="seclabel">Parte 2 · A solução</div><div class="pnum">09</div>
+    <div class="body" style="display:flex;flex-direction:column;justify-content:center;top:0;bottom:0">
+      <h2 class="h reveal d1">Como o sistema <span class="ac">funciona</span></h2>
+      <div class="flow reveal d2">
+        <div class="step"><div class="si">01</div><div class="st">Webcam</div><div class="sd">captura</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="si">02</div><div class="st">MediaPipe</div><div class="sd">rosto e olhos</div></div>
+        <div class="arrow">→</div>
+        <div class="step hot"><div class="si">03</div><div class="st">EAR + CNN</div><div class="sd">estado do olho</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="si">04</div><div class="st">Decisão</div><div class="sd">há fadiga?</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="si">05</div><div class="st">Alerta</div><div class="sd">som + tela</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- === 10 ARQUITETURA CNN === -->
+  <section class="slide">
+    <div class="dots"></div><div class="brk"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+    <div class="seclabel">Parte 2 · A CNN do projeto</div><div class="pnum">10</div>
+    <div class="body" style="display:flex;flex-direction:column;justify-content:center;top:0;bottom:0">
+      <h2 class="h reveal d1">A arquitetura da <span class="ac">CNN</span></h2>
+      <div class="arch reveal d2">
+        <div class="lay"><div class="lt">Entrada</div><div class="ls">64×64×1</div></div>
+        <span class="amini">→</span>
+        <div class="lay conv"><div class="lt">Conv 16</div><div class="ls">+ ReLU + Pool</div></div>
+        <span class="amini">→</span>
+        <div class="lay conv"><div class="lt">Conv 32</div><div class="ls">+ ReLU + Pool</div></div>
+        <span class="amini">→</span>
+        <div class="lay conv"><div class="lt">Conv 64</div><div class="ls">+ ReLU + Pool</div></div>
+        <span class="amini">→</span>
+        <div class="lay"><div class="lt">Dense 64</div><div class="ls">Flatten</div></div>
+        <span class="amini">→</span>
+        <div class="lay out"><div class="lt">Saída</div><div class="ls">aberto / fechado</div></div>
+      </div>
+      <p class="lead reveal d3" style="margin-top:60px">Blocos de convolução extraem características do olho até a camada final, que decide entre <b>aberto</b> e <b>fechado</b>.</p>
+    </div>
+  </section>
+
+  <!-- === 11 DADOS + TREINO + RESULTADO === -->
+  <section class="slide">
+    <div class="dots"></div><div class="brk"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+    <div class="seclabel">Parte 2 · Dados e resultado</div><div class="pnum">11</div>
+    <div class="body" style="display:flex;align-items:center;gap:80px;top:210px;bottom:120px">
+      <div style="flex:1">
+        <div class="cards" style="margin-top:0">
+          <div class="card reveal d1"><div class="k">Anotação automática</div><h3>O EAR rotula sozinho</h3><p>Milhares de recortes de olho são marcados como aberto/fechado sem anotação manual.</p></div>
+          <div class="card reveal d2"><div class="k">Treino</div><h3>CrossEntropyLoss + Adam</h3><p>A CNN aprende a classificar o estado do olho a partir dos dados coletados.</p></div>
+        </div>
+      </div>
+      <div style="text-align:center" class="reveal d3">
+        <div class="bignum">98,4%</div>
+        <div class="biglabel">acurácia da CNN</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- === 12 DEMO === -->
+  <section class="slide">
+    <div class="dots"></div><div class="brk"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+    <div class="seclabel">Parte 2 · Demonstração</div><div class="pnum">12</div>
+    <div class="body demo" style="top:0;bottom:0">
+      <div>
+        <div class="live reveal d1">ao vivo</div>
+        <div class="dt reveal d2">Demonstração</div>
+        <div class="chip reveal d3" style="margin-top:34px">EAR <b>0.02</b> &nbsp; PERCLOS <b>47%</b> &nbsp; ● FADIGA</div>
+        <div class="dsub reveal d4">Olhos fechados → a tela fica vermelha e o alarme dispara.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- === 13 FECHO === -->
+  <section class="slide close">
+    <div class="dots"></div><div class="brk"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+    <div class="seclabel">Conclusão</div><div class="pnum">13</div>
+    <div class="body" style="display:flex;flex-direction:column;justify-content:center;top:0;bottom:0">
+      <h2 class="h reveal d1">Da CNN ao <span class="ac">DMS</span></h2>
+      <p class="lead reveal d2">Usamos uma <b>CNN</b> para resolver um problema real de visão computacional. E levamos adiante: no projeto final, evoluímos para um <b>Sistema de Monitoramento do Motorista (DMS)</b> completo — distração, microssono e mais.</p>
+      <div class="linkrow reveal d3">
+        <span class="lpill">github.com/luisacaetano/driver-fatigue-cnn</span>
+      </div>
+      <div class="thanks reveal d4" style="margin-top:54px">Obrigada! <span class="ac">Perguntas?</span></div>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<!-- controles -->
+<div class="deck-controls"><span id="pgLabel">01 / 13</span><div class="bar"><span id="pgBar" style="width:7%"></span></div></div>
+<div class="edit-hotzone" title="Modo edição (E)"></div>
+<button class="edit-toggle" id="editToggle" title="Modo edição (E)">✏️ editar</button>
+
+<script>
+/* ===========================================================
+   CONTROLADOR DA APRESENTAÇÃO
+   Setas / Espaço / clique / swipe / roda do mouse navegam.
+   =========================================================== */
+class Deck{
+  constructor(){
+    this.slides=[...document.querySelectorAll('.slide')];
+    this.i=0; this.stage=document.getElementById('deckStage');
+    this.fit(); addEventListener('resize',()=>this.fit());
+    this.keys(); this.touch(); this.wheel();
+    this.show(0);
+  }
+  fit(){const k=Math.min(innerWidth/1920,innerHeight/1080);
+    this.stage.style.transform=`translate(${(innerWidth-1920*k)/2}px,${(innerHeight-1080*k)/2}px) scale(${k})`}
+  show(n){this.i=Math.max(0,Math.min(n,this.slides.length-1));
+    this.slides.forEach((s,j)=>{s.classList.toggle('active',j===this.i);s.classList.toggle('visible',j===this.i)});
+    const tot=this.slides.length;
+    document.getElementById('pgLabel').textContent=String(this.i+1).padStart(2,'0')+' / '+tot;
+    document.getElementById('pgBar').style.width=((this.i+1)/tot*100)+'%';}
+  next(){this.show(this.i+1)} prev(){this.show(this.i-1)}
+  keys(){addEventListener('keydown',e=>{
+    if(e.target.getAttribute&&e.target.getAttribute('contenteditable')==='true')return;
+    if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();this.next()}
+    if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();this.prev()}
+    if(e.key==='Home')this.show(0); if(e.key==='End')this.show(this.slides.length-1);
+  })}
+  touch(){let x=0;addEventListener('touchstart',e=>x=e.touches[0].clientX,{passive:true});
+    addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-x;if(Math.abs(d)>60)d<0?this.next():this.prev()},{passive:true})}
+  wheel(){let lock=false;addEventListener('wheel',e=>{if(lock)return;if(Math.abs(e.deltaY)<24)return;
+    lock=true;e.deltaY>0?this.next():this.prev();setTimeout(()=>lock=false,650)},{passive:true})}
+}
+const deck=new Deck();
+
+/* ===== Modo edição inline (E / hotzone) — salva no navegador ===== */
+const editor={isActive:false,
+  els:[...document.querySelectorAll('.h,.lead,.card h3,.card p,.ttl,.sub,.dt,.dsub,.thanks,.lpill,.step .st,.step .sd')],
+  toggle(){this.isActive=!this.isActive;
+    this.els.forEach(el=>el.setAttribute('contenteditable',this.isActive));
+    document.getElementById('editToggle').classList.toggle('active',this.isActive);
+    if(!this.isActive)localStorage.setItem('deckEdits',document.querySelector('.deck-stage').innerHTML)}};
+(function restore(){const s=localStorage.getItem('deckEdits');if(s)document.querySelector('.deck-stage').innerHTML=s;})();
+document.getElementById('editToggle').addEventListener('click',()=>editor.toggle());
+const hz=document.querySelector('.edit-hotzone'),et=document.getElementById('editToggle');let ht=null;
+hz.addEventListener('mouseenter',()=>{clearTimeout(ht);et.classList.add('show')});
+hz.addEventListener('mouseleave',()=>{ht=setTimeout(()=>{if(!editor.isActive)et.classList.remove('show')},400)});
+et.addEventListener('mouseenter',()=>clearTimeout(ht));
+et.addEventListener('mouseleave',()=>{ht=setTimeout(()=>{if(!editor.isActive)et.classList.remove('show')},400)});
+hz.addEventListener('click',()=>editor.toggle());
+addEventListener('keydown',e=>{if((e.key==='e'||e.key==='E')&&e.target.getAttribute('contenteditable')!=='true')editor.toggle()});
+</script>
+</body>
+</html>

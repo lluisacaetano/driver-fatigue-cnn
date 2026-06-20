@@ -28,7 +28,8 @@ driver-fatigue-cnn/
 ├── treino.py              # treinamento da CNN
 ├── requirements.txt       # dependências
 ├── face_landmarker.task   # modelo de rosto (MediaPipe)
-└── gesture_recognizer.task# modelo de gestos (MediaPipe)
+├── gesture_recognizer.task# modelo de gestos (MediaPipe)
+└── apresentacao/          # slides do seminário (HTML — abrir no navegador)
 ```
 
 ## Como executar
