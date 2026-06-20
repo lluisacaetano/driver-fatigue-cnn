@@ -1,0 +1,6 @@
+opencv-python
+mediapipe
+numpy
+pyobjc-framework-AVFoundation; sys_platform == "darwin"
+torch
+torchvision

@@ -1,0 +1,26 @@
+# Ambiente virtual Python (regenerável via requirements.txt)
+venv/
+.venv/
+
+# Cache do Python
+__pycache__/
+*.pyc
+
+# Dataset coletado (regenerável via coletar_dados.py)
+dataset/
+
+# Eventos/clipes gerados em tempo de execução
+eventos/
+
+# Arquivos do sistema
+.DS_Store
+
+# Arquivos auxiliares do LaTeX
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.toc
+
+# Documento do tutorial (entregue separadamente; fora do repo de codigo)
+documento_latex/
