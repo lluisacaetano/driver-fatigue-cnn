@@ -26,7 +26,6 @@ driver-fatigue-cnn/
 ├── coletar_dados.py       # coleta e anotação automática do dataset
 ├── modelos.py             # arquitetura da CNN (e do ViT, para comparação)
 ├── treino.py              # treinamento e comparação CNN vs ViT
-├── gerar_figuras.py       # gera figuras a partir dos dados/resultados
 ├── requirements.txt       # dependências
 ├── face_landmarker.task   # modelo de rosto (MediaPipe)
 └── gesture_recognizer.task# modelo de gestos (MediaPipe)

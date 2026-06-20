@@ -2,7 +2,7 @@
 Detector de fadiga do motorista em tempo real.
 Usa o MediaPipe FaceLandmarker (API 'tasks') para achar os olhos/boca e calcula:
   - EAR (Eye Aspect Ratio): mede o quanto o olho esta aberto
-  - PERCLOS: % do tempo com os olhos fechados (padrao-ouro de fadiga)
+  - PERCLOS: % do tempo com os olhos fechados
   - Bocejo (MAR) e contagem de piscadas
 
 Pre-requisito: o arquivo 'face_landmarker.task' na mesma pasta.
@@ -151,7 +151,7 @@ def main():
         if not ok:
             break
 
-        frame = cv2.flip(frame, 1)            # espelha (fica mais natural)
+        frame = cv2.flip(frame, 1)            # espelha 
         h, w = frame.shape[:2]
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 

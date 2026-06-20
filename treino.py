@@ -86,7 +86,7 @@ def n_params(m):
 
 
 def main():
-    # Checagem amigavel: precisa ter coletado dados antes
+    # precisa ter coletado dados antes
     for c in ("aberto", "fechado"):
         p = os.path.join(PASTA, c)
         if not os.path.isdir(p) or len(os.listdir(p)) < 10:
@@ -107,7 +107,7 @@ def main():
         resultados.append((nome, acc, params, ms))
         print()
 
-    # Tabela final (o resultado do artigo!)
+    # Tabela final 
     print("================ COMPARACAO  CNN  vs  ViT ================")
     print(f"{'Modelo':<8}{'Acuracia':<12}{'Parametros':<14}{'Tempo/img':<10}")
     print("-" * 44)

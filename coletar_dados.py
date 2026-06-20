@@ -1,5 +1,5 @@
 """
-Coleta automatica de dados (ANOTACAO AUTOMATICA) para treinar o classificador
+Coleta automatica de dados para treinar o classificador
 de estado do olho. Usa o EAR para rotular cada recorte de olho como
 'aberto' ou 'fechado' -- sem nenhuma anotacao manual.
 
