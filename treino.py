@@ -1,6 +1,5 @@
 """
-Treina a CNN e o ViT no dataset de olhos (aberto/fechado), avalia os dois e
-imprime uma TABELA COMPARATIVA (acuracia, nº de parametros, velocidade).
+Treina a CNN no dataset de olhos (aberto/fechado) e avalia a acuracia.
 
 Pre-requisito: rodar 'python coletar_dados.py' antes, para gerar dataset/.
 Rode:  python treino.py
@@ -14,7 +13,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 
-from modelos import CNN, ViT
+from modelos import CNN
 
 PASTA = "dataset"
 EPOCAS = 12
@@ -97,28 +96,21 @@ def main():
     tr, val, classes, n = carregar_dados()
     print(f"Dataset: {n} imagens | classes: {classes}\n")
 
-    resultados = []
-    for nome, modelo in (("CNN", CNN()), ("ViT", ViT())):
-        print(f"=== Treinando {nome} ===")
-        acc = treinar(modelo, tr, val, nome)
-        ms = velocidade_ms(modelo)
-        params = n_params(modelo)
-        torch.save(modelo.state_dict(), f"{nome.lower()}.pt")
-        resultados.append((nome, acc, params, ms))
-        print()
+    print("=== Treinando CNN ===")
+    modelo = CNN()
+    acc = treinar(modelo, tr, val, "CNN")
+    ms = velocidade_ms(modelo)
+    params = n_params(modelo)
+    torch.save(modelo.state_dict(), "cnn.pt")
 
-    # Tabela final 
-    print("================ COMPARACAO  CNN  vs  ViT ================")
-    print(f"{'Modelo':<8}{'Acuracia':<12}{'Parametros':<14}{'Tempo/img':<10}")
-    print("-" * 44)
-    for nome, acc, params, ms in resultados:
-        print(f"{nome:<8}{acc*100:>6.1f}%     {params:>10,}    {ms:>6.2f} ms")
+    print("\n================ RESULTADO (CNN) ================")
+    print(f"Acuracia: {acc*100:.1f}%   Parametros: {params:,}   "
+          f"Tempo/img: {ms:.2f} ms")
 
     with open("resultados.txt", "w") as f:
         f.write("Modelo,Acuracia(%),Parametros,Tempo_ms_por_img\n")
-        for nome, acc, params, ms in resultados:
-            f.write(f"{nome},{acc*100:.1f},{params},{ms:.2f}\n")
-    print("\nModelos salvos (cnn.pt / vit.pt) e tabela em resultados.txt")
+        f.write(f"CNN,{acc*100:.1f},{params},{ms:.2f}\n")
+    print("\nModelo salvo (cnn.pt) e resultado em resultados.txt")
 
 
 if __name__ == "__main__":

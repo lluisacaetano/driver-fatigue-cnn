@@ -24,8 +24,8 @@ Ao detectar sinais de fadiga, o sistema emite um **alarme sonoro** e um aviso na
 driver-fatigue-cnn/
 ├── detector_fadiga.py     # detector em tempo real (EAR + PERCLOS + alerta)
 ├── coletar_dados.py       # coleta e anotação automática do dataset
-├── modelos.py             # arquitetura da CNN (e do ViT, para comparação)
-├── treino.py              # treinamento e comparação CNN vs ViT
+├── modelos.py             # arquitetura da CNN
+├── treino.py              # treinamento da CNN
 ├── requirements.txt       # dependências
 ├── face_landmarker.task   # modelo de rosto (MediaPipe)
 └── gesture_recognizer.task# modelo de gestos (MediaPipe)
@@ -40,7 +40,7 @@ pip install -r requirements.txt
 
 python detector_fadiga.py         # detector em tempo real
 python coletar_dados.py           # coleta o dataset de olhos
-python treino.py                  # treina a CNN e compara com o ViT
+python treino.py                  # treina a CNN
 ```
 
 ## Resultados
@@ -48,10 +48,8 @@ python treino.py                  # treina a CNN e compara com o ViT
 | Modelo | Acurácia | Parâmetros | Tempo/imagem |
 |--------|----------|------------|--------------|
 | **CNN** | **98,4%** | 285.634 | **0,43 ms** |
-| ViT     | 96,0%     | 142.530 | 0,88 ms      |
 
-A CNN superou o Vision Transformer (ViT) em acurácia e velocidade neste cenário,
-em consonância com a literatura (ViT depende de grandes volumes de dados).
+A CNN classifica o estado do olho (aberto/fechado) com **98,4%** de acurácia.
 
 ## Autor
 

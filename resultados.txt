@@ -1,3 +1,2 @@
 Modelo,Acuracia(%),Parametros,Tempo_ms_por_img
 CNN,98.4,285634,0.43
-ViT,96.0,142530,0.88
